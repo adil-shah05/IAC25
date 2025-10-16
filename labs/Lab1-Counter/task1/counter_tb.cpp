@@ -24,14 +24,12 @@ int main(int argc, char **argv, char **env)
     int stopclk = 0;      // counter for stopping cycles
     bool stopped = false; // flag to ensure we only stop once
 
-    // run simulation for many clock cycles
     for (i = 0; i < 300; i++)
     {
 
-        // dump variables into VCD file and toggle clock
         for (clk = 0; clk < 2; clk++)
         {
-            tfp->dump(2 * i + clk); // unit is in ps!!!
+            tfp->dump(2 * i + clk);
             top->clk = !top->clk;
             top->eval();
         }
