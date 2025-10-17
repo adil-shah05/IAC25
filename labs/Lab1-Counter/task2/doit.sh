@@ -1,5 +1,6 @@
 #!/bin/bash
 
+~/Documents/iac/lab0-devtools/tools/attach_usb.sh
 # cleanup
 rm -rf obj_dir
 rm -f counter.vcd
@@ -13,4 +14,3 @@ make -j -C obj_dir/ -f Vcounter.mk Vcounter
 # run executable simulation file
 obj_dir/Vcounter
 
-~/Documents/iac/lab0-devtools/tools/attach_usb.sh
