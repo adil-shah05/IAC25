@@ -22,10 +22,13 @@ int main(int argc, char **argv, char **env) {
     // initialize simulation inputs
     top->clk = 1;
     top->rst = 1;
-    top->en = 1;
+    top->ld = 0;
+    top->v = 5;
+
+    vbdSetMode(1);
 
     // run simulation for many clock cycles
-    for (i=0; i<300; i++) {
+    for (i=0; i<10000; i++) {
 
         // dump variables into VCD file and toggle clock
         for (clk=0; clk<2; clk++) {
@@ -43,7 +46,7 @@ int main(int argc, char **argv, char **env) {
 
         top->rst = (i <2) | (i == 15);
         //top->en = (i>4);
-        top->en = vbdFlag();
+        top->ld = vbdFlag();
         if (Verilated::gotFinish())  exit(0);
     }
     vbdClose();
