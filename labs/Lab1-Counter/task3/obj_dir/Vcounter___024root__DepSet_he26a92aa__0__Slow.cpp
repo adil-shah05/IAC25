@@ -11,7 +11,7 @@ VL_ATTR_COLD void Vcounter___024root___eval_initial(Vcounter___024root* vlSelf) 
     Vcounter__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     VL_DEBUG_IF(VL_DBG_MSGF("+    Vcounter___024root___eval_initial\n"); );
     // Body
-    vlSelf->__Vclklast__TOP__clk = vlSelf->clk;
+    vlSelf->__Vclklast__TOP__ld = vlSelf->ld;
 }
 
 VL_ATTR_COLD void Vcounter___024root___eval_settle(Vcounter___024root* vlSelf) {
