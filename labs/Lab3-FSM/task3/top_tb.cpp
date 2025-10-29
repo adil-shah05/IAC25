@@ -1,44 +1,3 @@
-Calibrating the clock tick module found that a value of 25 for N gave a good 1 second beat. I then made a top level module that combined both the state machine and clktick modules.
-
-```sv
-module top #(
-    parameter WIDTH = 16
-) (
-    input  logic             clk,      // clock 
-    input  logic             rst,      // reset
-    input  logic [WIDTH-1:0] N,        // clock divided by N+1
-    output  logic [7:0] data_out
-     
-);
-
-logic tick;
-logic en;
-
-assign en = tick;
-
-clktick #(
-    .WIDTH(WIDTH)
-) clktick1 (
-    .clk(clk),
-    .rst(rst),
-    .en(1),
-    .N(N),
-    .tick(tick)
-);
-
-f1_fsm f1 (
-    .clk(clk),
-    .rst(rst),
-    .en(en),
-    .data_out(data_out)
-);
-
-endmodule
-```
-
-The testbench that was used can be seen below.
-
-```cpp
 #include "Vtop.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
@@ -97,4 +56,3 @@ int main(int argc, char **argv, char **env)
     tfp->close();
     exit(0);
 }
-```

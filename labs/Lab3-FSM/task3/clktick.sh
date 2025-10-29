@@ -11,7 +11,7 @@ verilator -Wall --cc --trace clktick.sv --exe clktick_tb.cpp
 make -j -C obj_dir/ -f Vclktick.mk Vclktick
 
 # run executable simulation file
-echo "\nRunning simulation"
+echo "\n Running simulation"
 obj_dir/Vclktick
-echo "\nSimulation completed"
+echo "\n Simulation completed"
 
