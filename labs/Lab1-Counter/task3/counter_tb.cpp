@@ -1,4 +1,4 @@
-#include "Vcounter.h"
+#include "Vf1_fsm.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
 #include "vbuddy.cpp"
@@ -37,16 +37,19 @@ int main(int argc, char **argv, char **env) {
             top->eval ();
         }
 
-        vbdHex(4, (int(top->count) >> 16) & 0XF);
-        vbdHex(3, (int(top->count) >> 8) & 0XF);
-        vbdHex(2, (int(top->count) >> 4) & 0XF);
-        vbdHex(1, int(top->count) & 0XF);
+        top->rst = 0
+        //top->en = (i>4);
+        top->en = vbdFlag();
+        vbdBar(top->data_out & 0xFF);
+
+        // vbdHex(4, (int(top->count) >> 16) & 0XF);
+        // vbdHex(3, (int(top->count) >> 8) & 0XF);
+        // vbdHex(2, (int(top->count) >> 4) & 0XF);
+        // vbdHex(1, int(top->count) & 0XF);
         //vbdPlot(int(top->count), 0, 255);
         vbdCycle(i+1);
 
-        top->rst = (i <2) | (i == 15);
-        //top->en = (i>4);
-        top->ld = vbdFlag();
+
         if (Verilated::gotFinish())  exit(0);
     }
     vbdClose();
