@@ -1,96 +1,127 @@
-To allow for two data ouputs from the ROM the sv file was changed.
+This was the top level sheet that connected the counter to the RAM module.The RAM module was the same as the one shown in the lecture slides for memories.
 
 ```sv
-module rom #(
-    parameter ADDRESS_WIDTH = 8,
-              DATA_WIDTH = 8
-)(
-    input logic                      clk,
-    input logic [ADDRESS_WIDTH-1:0] addr,
-    input logic [ADDRESS_WIDTH-1:0] offset, // decides the address for output port 2
-    output logic [DATA_WIDTH-1:0]    dout1, // 2 output ports
-    output logic [DATA_WIDTH-1:0]    dout2
-
+module sigdelay #(
+    parameter ADDRESS_WIDTH = 9,
+    parameter DATA_WIDTH = 8
+) (
+    input logic clk,
+    input logic rst,
+    input logic en,
+    input logic rd_en,
+    input logic wr_en,
+    input logic incr,
+    input logic [ADDRESS_WIDTH-1:0] offset,
+    input logic [DATA_WIDTH-1:0] din,
+    output logic [DATA_WIDTH-1:0] dout
 );
 
-logic [DATA_WIDTH-1:0] rom_array [2**ADDRESS_WIDTH-1:0];
+logic [ADDRESS_WIDTH-1:0] count;
+logic [ADDRESS_WIDTH-1:0] rd_addr;
+logic [ADDRESS_WIDTH-1:0] wr_addr;
 
-initial begin
-    $display("Loading rom.");
-    $readmemh("sinerom.mem", rom_array);
-end
+assign wr_addr = count;
+assign rd_addr = count + offset;
 
-always_ff @(posedge clk) begin
-    // output is synchronous
-    dout1 <= rom_array [addr];
-    dout2 <= rom_array [addr + offset];
-end
+ram #(
+    .ADDRESS_WIDTH(ADDRESS_WIDTH),
+    .DATA_WIDTH(DATA_WIDTH)
+) ram1 (
+    .clk(clk),
+    .wr_en(wr_en),
+    .rd_en(rd_en),
+    .wr_addr(wr_addr),
+    .rd_addr(rd_addr),
+    .din(din),
+    .dout(dout)
+);
+
+counter #(
+    .WIDTH(ADDRESS_WIDTH)
+) counter1 (
+    .clk(clk),
+    .rst(rst),
+    .en(en),
+    .incr(incr),
+    .count(count)
+);
 
 endmodule
 ```
-
-The testbench was also changed. 
+The testbench used can also be seen below.
 
 ```cpp
-#include "Vsinegen.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
-#include "vbuddy.cpp"
+#include "Vsigdelay.h"
+
+#include "vbuddy.cpp" // include vbuddy code
+#define MAX_SIM_CYC 1000000
+#define ADDRESS_WIDTH 9
+#define RAM_SZ pow(2, ADDRESS_WIDTH)
 
 int main(int argc, char **argv, char **env)
 {
-    int i;
-    int clk;
+  int simcyc; // simulation clock count
+  int tick;   // each clk cycle has two ticks for two edges
 
-    Verilated::commandArgs(argc, argv);
-    // init top verilog instance
-    Vsinegen *top = new Vsinegen;
-    // init trace dump
-    Verilated::traceEverOn(true);
-    VerilatedVcdC *tfp = new VerilatedVcdC;
-    top->trace(tfp, 99);
-    tfp->open("sinegen.vcd");
+  Verilated::commandArgs(argc, argv);
+  // init top verilog instance
+  Vsigdelay *top = new Vsigdelay;
+  // init trace dump
+  Verilated::traceEverOn(true);
+  VerilatedVcdC *tfp = new VerilatedVcdC;
+  top->trace(tfp, 99);
+  tfp->open("sigdelay.vcd");
 
-    // init Vbuddy
-    if (vbdOpen() != 1)
-        return (-1);
-    vbdHeader("Lab 2: SigGen");
+  // init Vbuddy
+  if (vbdOpen() != 1)
+    return (-1);
+  vbdHeader("L2T3:Delay");
+  // vbdSetMode(1);        // Flag mode set to one-shot
 
-    // initialize simulation inputs
-    top->clk = 1;
-    top->rst = 1;
-    top->en = 1;
-    top->incr = 1;
+  // initialize simulation input
+  top->clk = 1;
+  top->rst = 1;
+  top->wr_en = 1;
+  top->rd_en = 1;
+  top->en = 1;
+  top->incr = 1;
+  top->offset = 64;
 
-    // run simulation for many clock cycles
-    for (i = 0; i < 1000000; i++)
+  // intialize variables for analogue output
+  vbdInitMicIn(RAM_SZ);
+
+  // run simulation for MAX_SIM_CYC clock cycles
+  for (simcyc = 0; simcyc < MAX_SIM_CYC; simcyc++)
+  {
+    // dump variables into VCD file and toggle clock
+    for (tick = 0; tick < 2; tick++)
     {
-        // Set inputs BEFORE clock edges
-        top->rst = (i < 2);
-        top->en = 1;
-        top->offset = vbdValue();
-
-        // dump variables into VCD file and toggle clock
-        for (clk = 0; clk < 2; clk++)
-        {
-            tfp->dump(2 * i + clk);
-            top->clk = !top->clk;
-            top->eval();
-        }
-
-        // ++++ Send sine wave value to Vbuddy
-        vbdPlot(int(top->dout1), 0, 255);
-        vbdPlot(int(top->dout2), 0, 255);
-        vbdCycle(i + 1);
-        // ---- end of Vbuddy output section
-
-        if ((Verilated::gotFinish()) || (vbdGetkey() == 'q'))
-            exit(0);
+      tfp->dump(2 * simcyc + tick);
+      top->clk = !top->clk;
+      top->eval();
     }
 
-    vbdClose();
-    tfp->close();
-    exit(0);
+    if (simcyc == 1)
+      top->rst = 0; // release reset after first cycle
+
+    top->din = vbdMicValue();
+    top->offset = abs(vbdValue()); // adjust delay by changing incr
+
+    // plot RAM input/output, send sample to DAC buffer, and print cycle count
+    vbdPlot(int(top->din), 0, 255);
+    vbdPlot(int(top->dout), 0, 255);
+    vbdCycle(simcyc);
+
+    // either simulation finished, or 'q' is pressed
+    if ((Verilated::gotFinish()) || (vbdGetkey() == 'q'))
+      exit(0);
+  }
+
+  vbdClose(); // ++++
+  tfp->close();
+  printf("Exiting\n");
+  exit(0);
 }
 ```
-
